@@ -1,4 +1,14 @@
-class SerialCommander {
+#include <SDRAM.h>
+#include <WiFiInterface.h>
+#include <SPI.h>
+#include <WiFi.h>
+#include <Arduino.h>
+#include <Arduino_USBHostMbed5.h>
+#include <FATFileSystem.h>
+#include <DigitalOut.h>
+#include "config.h"
+
+class SerialCommander {  
 public:
   // Commander Version
   float com_ver;
@@ -150,14 +160,66 @@ private:
       String string = message.substring(4);
       Serial.println(string);
 
-    //... Rest of the commands ...
 
+
+    } else if (message == "PING") {
+      if (WiFi.status() == WL_CONNECTED) {
+        Serial.println("PING OK - IP: " + WiFi.localIP().toString());
+      } else {
+        Serial.println("PING FAIL - WiFi disconnected");
+      }
+    } else if (message == "IP") {
+      Serial.println("IP Address: " + WiFi.localIP().toString());
+    } else if (message == "MAC") {
+      Serial.println("MAC Address: " + WiFi.macAddress());
+    } else if (message == "RSSI") {
+      Serial.println("Signal Strength: " + String(WiFi.RSSI()) + " dBm");
+    } else if (message == "GATEWAY") {
+      Serial.println("Gateway: " + WiFi.gatewayIP().toString());
+    } else if (message == "DNS") {
+      Serial.println("DNS: " + WiFi.dnsIP().toString());
+    } else if (message == "STATUS") {
+      String status = (WiFi.status() == WL_CONNECTED) ? "Connected" : "Not connected";
+      Serial.println("Status: " + status + ", IP: " + WiFi.localIP().toString());
+    } else if (message.startsWith("FILE ")) {
+      String args = message.substring(5);
+      args.trim();
+
+      if (args == "LIST") {
+        handleFileCommand("LIST");
+      } else if (args.startsWith("READ ")) {
+        String filename = args.substring(5);
+        filename.trim();
+        handleFileCommand("READ", filename);
+      } else if (args.startsWith("WRITE ")) {
+        int spaceIndex = args.indexOf(' ', 6);
+        if (spaceIndex == -1) {
+          Serial.println("Syntax error: FILE WRITE <filename> <text>");
+          return;
+        }
+        String filename = args.substring(6, spaceIndex);
+        String text = args.substring(spaceIndex + 1);
+        handleFileCommand("WRITE", filename, text);
+      } else if (args.startsWith("DELETE ")) {
+        String filename = args.substring(7);
+        filename.trim();
+        handleFileCommand("DELETE", filename);
+      } else {
+        Serial.println("Invalid FILE command.");
+      }
+    } else if (message == "Soft-Reset") {
+      re_setup = true;
+    } else if (message == "EN-Wifi") {
+      wlan = true;
+    } else if (message == "EN-USB_THUMB") {
+      USBDRIVE = true;
+    } else if (message == "EN-Startup_config") {
+      startup_config_enabled = true;
     } else {
       Serial.println("Unknown command: " + message);
       Serial.println(" Type 'HELP' for assistance.");
     }
   }
-
   void storeKeyValue(String key, String value) {
     for (int i = 0; i < MAX_ITEMS; i++) {
       if (keys[i] == key || keys[i] == "") {
@@ -193,26 +255,25 @@ private:
     Serial.println(F("  GET <KEY>                                 - Reads data"));
     Serial.println(F("  LIST                                      - Lists all stored data"));
     Serial.println(F("  PIN ON/OFF <NUMBER>                       - Turns a pin on/off"));
-    Serial.println(F("  READ DI                                   - Reads the value of a digital pin"));
+    Serial.println(F("  READ DI <PIN>                             - Reads the value of a digital pin"));
     Serial.println(F("  ANALOG <PIN> <VALUE>                      - Sets PWM value (0-255) on a pin"));
     Serial.println(F("  TOGGLE PIN <NUMBER>                       - Toggles pin state (HIGH/LOW)"));
     Serial.println(F("  ECHO <String>                             - Returns the input string"));
-    Serial.println(F("  SET TIME <HOUR> <MINUTE> <SECOND>        - Sets the system time"));
+    Serial.println(F("  SET TIME <HOUR> <MINUTE> <SECOND>         - Sets the system time"));
     Serial.println(F("  REPEAT <NUMBER> <TEXT>                    - Repeats the text a specified number of times"));
     Serial.println(F("  CLEAR                                     - Clears the command line"));
     Serial.println(F("  BANNER                                    - Displays a banner like in MSF"));
-    Serial.println(F("  I2C SCAN                                  - Scans the I2C bus for devices"));
-    Serial.println(F("  I2C READ <ADDR> <REG> <LEN>               - Reads <LEN> bytes from device @ADDR starting at REG"));
-    Serial.println(F("  I2C WRITE <ADDR> <VAL...>                 - Sends one or more values to an I2C address"));
-    Serial.println(F("  TONE <PIN> <FREQUENCY> <DURATION(ms)>    - Plays tone on pin"));
+    Serial.println(F("  TONE <PIN> <FREQUENCY> <DURATION(ms)>     - Plays tone on pin"));
     Serial.println(F("  IP                                        - Shows the IP address on the current WiFi"));
     Serial.println(F("  MAC                                       - Shows the MAC address of the current WiFi"));
     Serial.println(F("  RSSI                                      - Shows signal strength of current WiFi"));
     Serial.println(F("  DNS                                       - Shows current DNS server (usually router)"));
     Serial.println(F("  STATUS                                    - Shows WiFi connection status"));
-    Serial.println(F("  EXEC <Script-name>                        - Executes a pre-defined script in code"));
-    Serial.println(F("  LIST_SCRIPTS                              - Lists all available scripts"));
-    Serial.println(F("  EXECUSB <Script-name>                     - Executes script stored on USB (if supported)"));
+    Serial.println(F("  FILE:                                     - do stuff with the USB-MassStorage device, type somthing behind it to list all commands"));
+    Serial.println(F("  Soft-Reset                                - Reinitializes the system without full reboot"));
+    Serial.println(F("  EN-Wifi                                   - Enables WiFi functionality"));
+    Serial.println(F("  EN-USB_THUMB                              - Enables support for USB thumb drives"));
+    Serial.println(F("  EN-Startup_config                         - Enables loading startup configuration from USB"));
   }
 
   void playTone(int pin, int frequency, int duration) {
