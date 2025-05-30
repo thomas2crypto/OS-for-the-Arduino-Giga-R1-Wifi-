@@ -48,7 +48,9 @@ Functional overview:
     (I'm sorry, i can't remember the names these Libarys are in the Libary manager, just search for the name of the ".h" file then you should find the libary needed).
 
 PS:
-the "ANALOG PIN" command is making me real truble, if any one is so kind to give me an fixed version of the else if fot the command, i would really appriciate it.
+The "ANALOG PIN" command is making me real truble, if any one is so kind to give me an fixed version of the else if fot the command, i would really appriciate it.
+
+
 CREDS:
  Ardunio Cheat Sheet: https://docs.arduino.cc/tutorials/giga-r1-wifi/cheat-sheet/?_gl=1*1xmc0ej*_up*MQ..*_ga*MTY3MTkzNDM4Ni4xNzQ4NjQxMDk4*_ga_NEXN8H46L5*czE3NDg2NDEwOTckbzEkZzAkdDE3NDg2NDEwOTckajYwJGwwJGgzMDY1MDcwNDM.
 
