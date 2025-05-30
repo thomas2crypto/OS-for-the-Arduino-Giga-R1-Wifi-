@@ -1,5 +1,4 @@
 #include <Arduino.h>
-#include <Wire.h>
 #include "serial.h"
 #include <SDRAM.h>
 #include <WiFiInterface.h>
@@ -25,6 +24,7 @@ bool wlan = false;
 bool enable_login = false;
 bool startup_config_enabled = true;
 
+
 char ssid[] = SECRET_SSID;
 char pass[] = SECRET_PASS;
 int status = WL_IDLE_STATUS;
@@ -48,7 +48,7 @@ void setup() {
   while (!Serial) {}
 
   if (startup_config_enabled) {
-    Serial.println("Please enter startup configuration (e.g., 101):");
+    Serial.println("Please enter startup configuration (e.g., 10):");
 
     while (Serial.available() == 0) {
       // Waiting for input
@@ -72,14 +72,6 @@ void setup() {
     } else {
       wlan = false;
       Serial.println("WiFi disabled");
-    }
-
-    if (config.length() >= 3 && config.charAt(2) == '1') {
-      enable_login = true;
-      Serial.println("Login enabled");
-    } else {
-      enable_login = false;
-      Serial.println("Login disabled");
     }
   }
 
@@ -149,11 +141,6 @@ void setup() {
       Serial.println("ERROR: Unable to open /usb directory!");
     }
   }
-
-  Serial.println("Initializing I2C interface...");
-  delay(250);
-  Wire.begin();
-  Serial.println("I2C ready.");
 
   if (wlan) {
     if (WiFi.status() == WL_NO_MODULE) {
@@ -243,3 +230,4 @@ void printMacAddress(byte mac[]) {
   }
   Serial.println();
 }
+
