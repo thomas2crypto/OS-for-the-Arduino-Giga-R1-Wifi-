@@ -3,7 +3,7 @@
 ## TL;DR
 
 A lightweight embedded OS and CLI framework for the Arduino GIGA R1 WiFi.  
-Features include startup configuration, login system, USB Mass Storage support, WiFi auto-connect, and a built-in command-line interface for runtime interaction and system control.
+Features include: startup configuration, login system, USB Mass Storage support, WiFi auto-connect, and a built-in command-line interface for runtime interaction and system control.
 
 ---
 
