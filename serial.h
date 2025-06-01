@@ -9,6 +9,7 @@
 #include "config.h"
 #include <mbed.h>
 #include <mbed_stats.h>
+#include "Programms.h"
 
 // Get the VERSION
 #define FW_VERSION "0.3.1"
@@ -249,6 +250,22 @@ private:
       showSysInfo();
     } else if (message == "UPTIME") {
       showUptime();
+    }else if (message == "LIST-PROGS") {
+      Programms::listAll(Serial);
+    }
+    // RUN command: e.g. "RUN BLINK" runs the program "blink"
+    else if (message.startsWith("RUN ")) {
+      // Extract everything after "RUN " as the program name
+      String programName = message.substring(4);
+      programName.trim();
+
+      if (programName.length() > 0) {
+        // Convert program name to lowercase if your program registry is case-sensitive
+        programName.toLowerCase();
+        Programms::run(programName.c_str(), Serial);
+      } else {
+        Serial.println(F("[ERROR] Please provide a program name after RUN."));
+      }
     } else {
       Serial.println("Unknown command: " + message);
       Serial.println(" Type 'HELP' for assistance.");
@@ -290,6 +307,8 @@ https:  //github.com/thomas2crypto/OS-for-the-Arduino-Giga-R1-Wifi-/blob/main/se
     Serial.println(F("  SET <KEY> <VALUE>                         - Stores data"));
     Serial.println(F("  GET <KEY>                                 - Reads data"));
     Serial.println(F("  LIST                                      - Lists all stored data"));
+    Serial.println(F("  LIST-PROGS                                - Lists all avalible Programms, definde in Programms.h"));
+    Serial.println(F("  RUN <name>                                      - runs a Programm, definde in Programms.h"));
     Serial.println(F("  PIN ON/OFF <NUMBER>                       - Turns a pin on/off"));
     Serial.println(F("  READ DI <PIN>                             - Reads the value of a digital pin"));
     Serial.println(F("  ANALOG <PIN> <VALUE>                      - Sets PWM value (0-255) on a pin"));
