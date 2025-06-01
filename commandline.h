@@ -7,13 +7,17 @@
 #include <FATFileSystem.h>
 #include <DigitalOut.h>
 #include "config.h"
+#include <mbed.h>
+#include <mbed_stats.h>
 
-class SerialCommander {  
+// Get the VERSION
+#define FW_VERSION "0.3.1"
+#define GIT_HASH "unknown"
+
+class SerialCommander {
 public:
-  // Commander Version
-  float com_ver;
-  void begin(unsigned long baud, float com_verValue) {
-    com_ver = com_verValue;
+
+  void begin(unsigned long baud) {
     Serial.begin(baud);
   }
 
@@ -29,6 +33,7 @@ public:
   }
 
 private:
+
   static const int BUFFER_SIZE = 200;
   static const int MAX_ITEMS = 200;
   char serialIn[BUFFER_SIZE];
@@ -153,9 +158,6 @@ private:
         Serial.println("          ");
       }
 
-    } else if (message == "VER") {  // Prints the current version
-      Serial.println(com_ver);
-
     } else if (message.startsWith("ECHO")) {  // Echoes the input string
       String string = message.substring(4);
       Serial.println(string);
@@ -207,14 +209,46 @@ private:
       } else {
         Serial.println("Invalid FILE command.");
       }
-    } else if (message == "Soft-Reset") {
+    } else if (message == "RESTART") {
       re_setup = true;
-    } else if (message == "EN-Wifi") {
+      Serial.println("System is restarting...");
+    } else if (message == "EN-WIFI") {
       wlan = true;
-    } else if (message == "EN-USB_THUMB") {
+      if (wlan) {
+        Serial.println("Wifi is now enable,please RESTART");
+      } else {
+        Serial.println("Wifi is now disable");
+      }
+    } else if (message == "EN-FIXED-WIFI") {
+      fixed_wifi = true;
+      if (fixed_wifi) {
+        Serial.println("fixed-Wifi is now enable,please RESTART");
+      } else {
+        Serial.println("fixed-Wifi is now disable");
+      }
+    } else if (message == "EN-USB-MASS") {
       USBDRIVE = true;
-    } else if (message == "EN-Startup_config") {
+      if (USBDRIVE) {
+        Serial.println("USB-Storage is now enable,please RESTART");
+      } else {
+        Serial.println("USB-Storage is now disable");
+      }
+    } else if (message == "EN-STARTUP-CONFIG") {
       startup_config_enabled = true;
+      if (startup_config_enabled) {
+        Serial.println("Startup-Config is now enable,please RESTART");
+      } else {
+        Serial.println("Startup-Config is now disable");
+      }
+    } else if (message == "SHOW-CONFIG") {
+      Serial.println("Current-Configuration:");
+      Serial.println("Wifi: " + String(wlan ? "enabled" : "disabled"));
+      Serial.println("USB: " + String(USBDRIVE ? "enabled" : "disabled"));
+      Serial.println("Startup-Config: " + String(startup_config_enabled ? "true" : "false"));
+    } else if (message == "SYSINFO") {
+      showSysInfo();
+    } else if (message == "UPTIME") {
+      showUptime();
     } else {
       Serial.println("Unknown command: " + message);
       Serial.println(" Type 'HELP' for assistance.");
@@ -241,6 +275,7 @@ private:
         Serial.print(key);
         Serial.print(" = ");
         Serial.println(values[i]);
+https:  //github.com/thomas2crypto/OS-for-the-Arduino-Giga-R1-Wifi-/blob/main/serial.h
         return;
       }
     }
@@ -250,7 +285,8 @@ private:
   void printHelp() {
     Serial.println(F("Available Commands:"));
     Serial.println(F("  HELP                                      - Displays this help message"));
-    Serial.println(F("  VER                                       - Shows the system version"));
+    Serial.println(F("  SYSINFO                                   - Shows Informatoin about the system"));
+    Serial.println(F("  UPTIME                                    - Shows the current Uptime"));
     Serial.println(F("  SET <KEY> <VALUE>                         - Stores data"));
     Serial.println(F("  GET <KEY>                                 - Reads data"));
     Serial.println(F("  LIST                                      - Lists all stored data"));
@@ -262,18 +298,20 @@ private:
     Serial.println(F("  SET TIME <HOUR> <MINUTE> <SECOND>         - Sets the system time"));
     Serial.println(F("  REPEAT <NUMBER> <TEXT>                    - Repeats the text a specified number of times"));
     Serial.println(F("  CLEAR                                     - Clears the command line"));
-    Serial.println(F("  BANNER                                    - Displays a banner like in MSF"));
     Serial.println(F("  TONE <PIN> <FREQUENCY> <DURATION(ms)>     - Plays tone on pin"));
     Serial.println(F("  IP                                        - Shows the IP address on the current WiFi"));
     Serial.println(F("  MAC                                       - Shows the MAC address of the current WiFi"));
     Serial.println(F("  RSSI                                      - Shows signal strength of current WiFi"));
     Serial.println(F("  DNS                                       - Shows current DNS server (usually router)"));
     Serial.println(F("  STATUS                                    - Shows WiFi connection status"));
-    Serial.println(F("  FILE:                                     - do stuff with the USB-MassStorage device, type somthing behind it to list all commands"));
-    Serial.println(F("  Soft-Reset                                - Reinitializes the system without full reboot"));
-    Serial.println(F("  EN-Wifi                                   - Enables WiFi functionality"));
-    Serial.println(F("  EN-USB_THUMB                              - Enables support for USB thumb drives"));
-    Serial.println(F("  EN-Startup_config                         - Enables loading startup configuration from USB"));
+    Serial.println(F("  FILE:                                     - Used to access the USB-Massstorage Device(see Readme on:)"));
+    Serial.println(F("  Link to Github: https://github.com/thomas2crypto/OS-for-the-Arduino-Giga-R1-Wifi-"));
+    Serial.println(F("  RESTART                                   - Reinitializes the system without full reboot"));
+    Serial.println(F("  EN-WIFI                                   - Enables WiFi functionality"));
+    Serial.println(F("  EN-FIXED-WIFI                             - Enables to connect always to a specifed  network"));
+    Serial.println(F("  EN-USB-MASS                               - Enables support for USB thumb drives"));
+    Serial.println(F("  EN-STARTUP-CONFIG                         - Enables loading startup configuration from USB"));
+    Serial.println(F("  SHOW-CONFIG                               - Shows the current Configuration"));
   }
 
   void playTone(int pin, int frequency, int duration) {
@@ -351,5 +389,47 @@ private:
       Serial.println("Error: Unknown file command.");
       Serial.println("Available actions: LIST, READ, WRITE, DELETE");
     }
+  }
+  int getFreeMemory() {
+    mbed_stats_heap_t heap_stats;
+    mbed_stats_heap_get(&heap_stats);
+
+    // Freier Heap = reservierte Gesamtgröße - aktuell genutzter Speicher
+    return (heap_stats.reserved_size - heap_stats.current_size);
+  }
+
+  void showSysInfo() {
+    Serial.println("System Information:");
+    Serial.println("-------------------");
+    Serial.println("Board         : Arduino GIGA R1 WiFi");
+    Serial.println("Firmware Ver. : 0.2.1");
+    Serial.println("Build Date    : " __DATE__ " " __TIME__);
+    Serial.println("Git Commit  : " GIT_HASH);
+    Serial.print("CPU Clock     : ");
+    Serial.print(SystemCoreClock / 1000000);
+    Serial.println(" MHz");
+    Serial.print("Free RAM     : ");
+    Serial.print(getFreeMemory() / 1024);
+    Serial.println(" KB");
+  }
+
+  // UPTIME
+  void showUptime() {
+    unsigned long ms = millis();
+    unsigned long s = ms / 1000;
+    unsigned int seconds = s % 60;
+    unsigned int minutes = (s / 60) % 60;
+    unsigned int hours = (s / 3600) % 24;
+    unsigned int days = s / 86400;
+
+    Serial.print("System Uptime: ");
+    Serial.print(days);
+    Serial.print("d ");
+    Serial.print(hours);
+    Serial.print("h ");
+    Serial.print(minutes);
+    Serial.print("m ");
+    Serial.print(seconds);
+    Serial.println("s");
   }
 };
