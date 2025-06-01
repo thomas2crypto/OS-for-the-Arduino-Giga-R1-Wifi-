@@ -5,7 +5,7 @@
 #include <SPI.h>
 #include <WiFi.h>
 #include "arduino_secrets.h"
-
+#include "Programms.h"
 #include <Arduino_USBHostMbed5.h>
 #include <FATFileSystem.h>
 #include <DigitalOut.h>
@@ -108,7 +108,9 @@ void setup() {
 
   Serial.println("Commander started...");
   delay(500);
-
+  Serial.println("initialize userprogramms...");
+  Programms::init();
+  Serial.println("Configurating the Pins...");
   //Pin-Configuration
   pinMode(StatusLedPin, OUTPUT);
 
@@ -169,7 +171,8 @@ void setup() {
   } else {
     Serial.println("WiFi disabled.");
   }
-
+  Serial.println("available Programms:");
+  Programms::listAll();
   Serial.println("Setup complete.");
   if (re_setup) {
     re_setup = !re_setup;
@@ -237,6 +240,7 @@ void printMacAddress(byte mac[]) {
   }
   Serial.println();
 }
+#include <WiFi.h>
 
 void connectToWiFi() {
   Serial.println(" Scanning for WiFi networks...");
