@@ -30,11 +30,12 @@ Features include: startup configuration, login system, USB Mass Storage support,
 4. **USB Setup**  
    If `USBDRIVE == true`, the system connects USB storage and displays  
    `"Directory /usb opened successfully."` on success.
-5. **WiFi Setup**  
-   If `wlan == true`, attempts to connect using `arduino_secrets.h`.
-6. **Re-setup Handling**  
+5. **WiFi Setup**
+   1. IF `fixed-wifi == true`, starts the func connectToWifi wich let's you dynamikliy connect to a Wifi at startup.
+   2. If `wlan == true`, attempts to connect using `arduino_secrets.h`.
+7. **Re-setup Handling**  
    Prevents infinite soft-reset loops.
-7. Enters the `loop()`.
+8. Enters the `loop()`.
 
 ---
 
@@ -55,7 +56,8 @@ These are the primary commands used to control and monitor the system:
 | Command            | Description                                     |
 |--------------------|-------------------------------------------------|
 | `HELP`             | Lists all available commands                    |
-| `VER`              | Prints CLI version                              |
+| `SYSINFO`          | Prints Information about the CLI                |
+| `UPTIME`           | Prints the current uptime since last reboot     |
 | `Soft-Reset`       | Re-runs `setup()` to apply changes              |
 | `EN-Wifi`          | Enables/disables WiFi subsystem                 |
 | `EN-USB`           | Enables/disables USB subsystem                  |
