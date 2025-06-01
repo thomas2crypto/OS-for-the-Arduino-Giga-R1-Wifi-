@@ -15,15 +15,17 @@ USBHostMSD msd;
 // Filesystem object with "usb" mount point
 mbed::FATFileSystem usb("usb");
 
-// USB-A Port Power Enable Pin (board-specific)
+// USB-A Port Power Enable Pin 
 const int USB_POWER_PIN = PA_15;
 
 // Configuration flags
-bool USBDRIVE = true;
+bool USBDRIVE = false;
 bool wlan = false;
+bool fixed_wifi = false;  // only connects to the wifi in the "arduino_secrest.h" header-file
 bool enable_login = false;
-bool startup_config_enabled = true;
+bool startup_config_enabled = false;
 
+bool no_networks_avan = false;
 
 char ssid[] = SECRET_SSID;
 char pass[] = SECRET_PASS;
@@ -37,14 +39,14 @@ int ledState = LOW;
 unsigned long previousMillis = 0;
 const long interval = 500;
 
-// Flag to trigger re-setup
+// Flag to trigger Soft-Reset
 bool re_setup = false;
 
 // CLI instance
 SerialCommander commander;
 
 void setup() {
-  commander.begin(115200, 0.2);
+  commander.begin(115200);
   while (!Serial) {}
 
   if (startup_config_enabled) {
@@ -107,6 +109,7 @@ void setup() {
   Serial.println("Commander started...");
   delay(500);
 
+  //Pin-Configuration
   pinMode(StatusLedPin, OUTPUT);
 
   if (USBDRIVE) {
@@ -147,18 +150,22 @@ void setup() {
       Serial.println("Communication with WiFi module failed!");
       while (true) {}  // Halt execution
     }
-
-    WiFi.setHostname("GIGA_R1");
-    while (status != WL_CONNECTED) {
-      Serial.print("Connecting to SSID: ");
-      Serial.println(ssid);
-      status = WiFi.begin(ssid, pass);
-      delay(5000);
+    if (fixed_wifi) {
+      WiFi.setHostname("GIGA_R1");
+      while (status != WL_CONNECTED) {
+        Serial.print("Connecting to SSID: ");
+        Serial.println(ssid);
+        status = WiFi.begin(ssid, pass);
+        delay(5000);
+      }
+    } else {
+      connectToWiFi();
     }
-
-    Serial.println("Network connected.");
-    printCurrentNetwork();
-    printWifiData();
+    if (no_networks_avan) {
+      Serial.println("Network connected.");
+      printCurrentNetwork();
+      printWifiData();
+    }
   } else {
     Serial.println("WiFi disabled.");
   }
@@ -230,4 +237,68 @@ void printMacAddress(byte mac[]) {
   }
   Serial.println();
 }
+#include <WiFi.h>
 
+void connectToWiFi() {
+  Serial.println(" Scanning for WiFi networks...");
+  int numNetworks = WiFi.scanNetworks();
+
+  if (numNetworks == 0) {
+    Serial.println(" No networks found.");
+    no_networks_avan = true;
+    return;
+  }
+
+  // Liste der Netzwerke anzeigen
+  for (int i = 0; i < numNetworks; i++) {
+    Serial.print(String(i + 1));
+    Serial.print(": ");
+    Serial.print(WiFi.SSID(i));
+    Serial.print(" (Signal: ");
+    Serial.print(WiFi.RSSI(i));
+    Serial.println(" dBm)");
+  }
+
+  Serial.println(" Enter the number of the WiFi network to connect to:");
+  while (Serial.available() == 0)
+    ;  // Warten auf Eingabe
+  int choice = Serial.parseInt();
+  if (choice < 1 || choice > numNetworks) {
+    Serial.println(" Invalid choice.");
+    return;
+  }
+
+  String ssid = WiFi.SSID(choice - 1);
+
+  Serial.print(" Enter password for ");
+  Serial.print(ssid);
+  Serial.println(":");
+
+  String password = "";
+  while (password.length() == 0) {
+    while (Serial.available() == 0)
+      ;  // Warten auf Eingabe
+    password = Serial.readStringUntil('\n');
+    password.trim();
+  }
+
+  Serial.println(" Connecting...");
+
+  WiFi.begin(ssid.c_str(), password.c_str());
+
+  unsigned long startAttemptTime = millis();
+  const unsigned long timeout = 15000;  // 15 Sekunden Timeout
+
+  while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < timeout) {
+    delay(500);
+    Serial.print(".");
+  }
+
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.println("\n Connected to " + ssid);
+    Serial.print(" IP Address: ");
+    Serial.println(WiFi.localIP());
+  } else {
+    Serial.println("\n Failed to connect.");
+  }
+}
