@@ -237,7 +237,6 @@ void printMacAddress(byte mac[]) {
   }
   Serial.println();
 }
-#include <WiFi.h>
 
 void connectToWiFi() {
   Serial.println(" Scanning for WiFi networks...");
